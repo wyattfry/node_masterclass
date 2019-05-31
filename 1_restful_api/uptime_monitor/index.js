@@ -5,11 +5,35 @@
 
 // dependencies
 const http = require('http');
+const https = require('https');
 const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
+const fs = require('fs');
 
-// server should respond to all requests with a string
-const server = http.createServer((req, res) => {
+const config = require('./config');
+
+// instantiate the http server
+const httpServer = http.createServer(unifiedServer);
+
+// start server
+httpServer.listen(config.httpPort, () => {
+    console.log(`The http server is listening on port ${config.httpPort}`);
+});
+
+const httpsServerOptions = {
+    'key': fs.readFileSync(`${__dirname}/https/key.pem`),
+    'cert': fs.readFileSync(`${__dirname}/https/cert.pem`),
+};
+
+// instantiate the https server
+const httpsServer = https.createServer(httpsServerOptions, unifiedServer);
+
+// start the https server
+httpsServer.listen(config.httpsPort, () => {
+    console.log(`The https server is listening on port ${config.httpsPort}`)
+})
+
+function unifiedServer(req, res) {
 
     // get url and parse
     const parsedUrl = url.parse(req.url, true);
@@ -48,36 +72,28 @@ const server = http.createServer((req, res) => {
         }
         handler(data, (statusCode = 200, payload = {}) => {
             serializedPayload = JSON.stringify(payload);
+            res.setHeader('Content-Type', 'application/json');
             res.writeHead(statusCode);
             res.end(serializedPayload);
             console.log(`Request: ${method.toUpperCase()} ${trimmedPath}`);
             console.log(`Response:`, statusCode, serializedPayload);
         });
     });
-});
-
-const PORT = 2113;
-
-// start server on port 3000
-server.listen(PORT, () => {
-    console.log(`The server is listening on port ${PORT}`);
-});
-
+}
 
 // handlers
 const handlers = {};
-
-handlers.sample = (data, callback) => {
-    // callback takes http status code & payload object
-    callback(200, {'message': 'looks good.'});
-};
 
 handlers.notfound = (data, callback) => {
     callback(404);
 };
 
+// ping handler
+handlers.ping = (data, callback) => {
+    callback(200);
+}
 
 // request router
 const router = {
-    'sample': handlers.sample
+    'ping': handlers.ping
 }
