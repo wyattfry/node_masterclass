@@ -11,6 +11,9 @@ const StringDecoder = require('string_decoder').StringDecoder;
 const fs = require('fs');
 
 const config = require('./config');
+const handlers = require('./lib/handlers');
+const helpers = require('./lib/helpers');
+
 
 // instantiate the http server
 const httpServer = http.createServer(unifiedServer);
@@ -68,7 +71,7 @@ function unifiedServer(req, res) {
             queryStringObject,
             method,
             header,
-            'payload': buffer,
+            'payload': helpers.parseJsonToObject(buffer),
         }
         handler(data, (statusCode = 200, payload = {}) => {
             serializedPayload = JSON.stringify(payload);
@@ -81,19 +84,10 @@ function unifiedServer(req, res) {
     });
 }
 
-// handlers
-const handlers = {};
 
-handlers.notfound = (data, callback) => {
-    callback(404);
-};
-
-// ping handler
-handlers.ping = (data, callback) => {
-    callback(200);
-}
 
 // request router
 const router = {
-    'ping': handlers.ping
+    'ping': handlers.ping,
+    'users': handlers.users,
 }

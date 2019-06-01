@@ -4,6 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const helpers = require('./helpers');
+
 // Container for the module to be exported
 const lib = {};
 
@@ -37,8 +39,8 @@ lib.create = (dir, file, data, callback) => {
 
 lib.read = (dir, file, callback) => {
     fs.readFile(lib.baseDir + dir + '/' + file + '.json', 'utf8', (err, data) => {
-        if (!err) {
-            callback(false, JSON.parse(data));
+        if (!err && data) {
+            callback(false, helpers.parseJsonToObject(data));
         } else {
             callback(err);
         }
