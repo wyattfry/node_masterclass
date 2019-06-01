@@ -1,7 +1,15 @@
 const assert = require('assert').strict;
 const crypto = require("crypto");
+const fs = require('fs');
+const path = require('path');
 
 const dir = 'test';
+const pathToDataDir = path.join(__dirname, '..', '.data', dir)
+
+if (!fs.existsSync(pathToDataDir)) {
+    fs.mkdirSync(pathToDataDir);
+}
+
 const file = crypto.randomBytes(16).toString("hex");
 const testData = 'test data';
 
