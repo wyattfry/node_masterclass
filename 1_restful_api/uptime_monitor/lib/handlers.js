@@ -133,6 +133,98 @@ handlers._users.delete = (data, callback) => {
     }
 }
 
+handlers.tokens = (data, callback) => {
+    const acceptableMethods = ['post', 'get', 'put', 'delete'];
+    if (acceptableMethods.indexOf(data.method) > -1) {
+        handlers._tokens[data.method](data, callback);
+    } else {
+        callback(405); // Method not allowed
+    }
+}
+
+handlers._tokens = {};
+
+handlers._tokens.post = (data, callback) => {
+// required: phone, password
+    const phone = typeof(data.payload.phone) == 'string' && data.payload.phone.trim().length === 10 ? data.payload.phone : false;
+    const password = typeof(data.payload.password) == 'string' && data.payload.password.trim().length > 0 ? data.payload.password : false;
+    if (phone && password) {
+        // get user with given phone
+        _data.read('users', phone, (err, userData) => {
+            if (!err && userData) {
+                const hashedPassword = helpers.hash(password);
+                if (hashedPassword == userData.hashedPassword) {
+                    const tokenId = helpers.createRandomString(20);
+                    const expires = Date.now() + 1000 * 60 * 60;
+                    const tokenObject = {
+                        'phone': phone,
+                        'id': tokenId,
+                        'expires': expires,
+                    };
+                    _data.create('tokens', tokenId, tokenObject, (err) => {
+                        if (!err) {
+                            callback(200, tokenObject);
+                        } else {
+                            callback(500, {'Error': 'Could not create new token'});
+                        }
+                    });
+                } else {
+                    callback(400, {'Error': 'Wrong password.'});
+                }
+            } else {
+                callback(400, {'Error': 'Could not find specified user.'});
+            }
+        });
+    } else {
+        callback(400, {'Error': 'Missing required fields.'});
+    }
+};
+
+handlers._tokens.get = (data, callback) => {
+    // required: id
+    const id = typeof(data.queryStringObject.id) == 'string' && data.queryStringObject.id.trim().length == 20 ? data.queryStringObject.id : false;
+    if (id) {
+        _data.read('tokens', id, (err, tokenData) => {
+            if (!err && tokenData) {
+                callback(200, tokenData);
+            } else {
+                callback(404);
+            }
+        });
+    } else {
+        callback(400, {'Error': 'Missing required field.'});
+    }
+
+};
+
+handlers._tokens.put = (data, callback) => {
+    // required: id, extend
+    const id = typeof(data.payload.id) == 'string' && data.payload.id.trim().length === 20 ? data.payload.id : false;
+    const extend = typeof(data.payload.extend) == 'boolean' && data.payload.extend === true ? data.payload.extend : false;
+    if (id && extend) {
+        _data.read('tokens', id, (err, tokenData) => {
+            if (tokenData.expires > Date.now()) {
+                tokenData.expires = Date.now() + 1000 * 60 * 60;
+                _data.update('token', id, tokenData, (err) => {
+                    if (!err) {
+                        callback(200);
+                    } else {
+                        callback(500, {'Error': 'Could not update token expiration. ' + err});
+                    }
+                })
+            } else {
+                callback(400, {'Error': 'Token is expired, cannot be extended'});
+            }
+        });
+    } else {
+        callback(400, {'Error': 'Missing required field(s) or invalid'});
+    }
+};
+
+handlers._tokens.delete = (data, callback) => {
+    
+};
+
 handlers.notfound = (data, callback) => {
     callback(404);
 };
