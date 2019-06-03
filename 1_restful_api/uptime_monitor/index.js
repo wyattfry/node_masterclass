@@ -52,7 +52,7 @@ function unifiedServer(req, res) {
     const method = req.method.toLowerCase();
 
     // get headers as object
-    const header = req.headers;
+    const headers = req.headers;
 
     // get payload / body if exists
     const decoder = new StringDecoder('utf-8');
@@ -70,7 +70,7 @@ function unifiedServer(req, res) {
             trimmedPath,
             queryStringObject,
             method,
-            header,
+            headers,
             'payload': helpers.parseJsonToObject(buffer),
         }
         handler(data, (statusCode = 200, payload = {}) => {

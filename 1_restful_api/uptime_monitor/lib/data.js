@@ -51,6 +51,7 @@ lib.read = (dir, file, callback) => {
 lib.update = (dir, file, data, callback) => {
     fs.open(lib.baseDir + dir + '/' + file + '.json', 'r+', (err, fileDescriptor) => {
         if (!err && fileDescriptor) {
+            console.log('fd', fileDescriptor);
             const stringData = JSON.stringify(data);
             fs.truncate(fileDescriptor, (err) => {
                 if (!err) {
@@ -72,6 +73,7 @@ lib.update = (dir, file, data, callback) => {
                 }
             });
         } else {
+            console.log('err', err, 'fileDescriptor', fileDescriptor);
             callback('Could not open the file to update. It may not exist.');
         }
     });

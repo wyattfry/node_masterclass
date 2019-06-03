@@ -54,59 +54,72 @@ handlers._users.post = (data, callback) => {
             }
         });
     } else {
-        console.log(firstName, lastName, phone, password, tosAgreement)
         callback(400, {'Error': 'Missing required field(s).'});
     }
 }
 
 handlers._users.get = (data, callback) => {
     // required: phone
-    // TODO only let users get their own user
     // validate phone
     const phone = typeof(data.queryStringObject.phone) == 'string' && data.queryStringObject.phone.trim().length == 10 ? data.queryStringObject.phone : false;
-    if (phone) {
-        _data.read('users', phone, (err, userData) => {
-            if (!err && userData) {
-                delete userData.hashedPassword;
-                callback(200, userData);
+    // get token from headers
+    console.log('data.headers', data.headers);
+    const token = typeof(data.headers.token) == 'string' ? data.headers.token : false;
+    handlers._tokens.verifyToken(token, phone, (tokenIsValid) => {
+        if (tokenIsValid) {
+            if (phone) {
+                _data.read('users', phone, (err, userData) => {
+                    if (!err && userData) {
+                        delete userData.hashedPassword;
+                        callback(200, userData);
+                    } else {
+                        callback(404);
+                    }
+                });
             } else {
-                callback(404);
+                callback(400, {'Error': 'Missing required field.'});
             }
-        });
-    } else {
-        callback(400, {'Error': 'Missing required field.'});
-    }
+        } else {
+            callback(403, {'Error': 'Token missing in header, or token is invalid.'});
+        }
+    });
 }
 
 handlers._users.put = (data, callback) => {
     // required: phone
     // optional: firstName, lastName, password (at least 1)
-    // TODO only let users update their own user
     // check for required field phone in req body
     const phone = typeof(data.payload.phone) == 'string' && data.payload.phone.trim().length === 10 ? data.payload.phone : false;
-    const firstName = typeof(data.payload.firstName) == 'string' && data.payload.firstName.trim().length > 0 ? data.payload.firstName : false;
-    const lastName = typeof(data.payload.lastName) == 'string' && data.payload.lastName.trim().length > 0 ? data.payload.lastName : false;
-    const password = typeof(data.payload.password) == 'string' && data.payload.password.trim().length > 0 ? data.payload.password : false;
-    if (phone && (firstName || lastName || password)) {
-        _data.read('users', phone, (err, userData) => {
-            if (!err && userData) {
-                userData.firstName = firstName ? firstName : userData.firstName;
-                userData.lastName = lastName ? lastName : userData.lastName;
-                userData.hashedPassword = password ? helpers.hash(password) : userData.hashedPassword;
-                _data.update('users', phone, userData, (err) => {
-                    if (!err) {
-                        callback(200)
+    const token = tyepoe(data.headers.token) == 'string' ? data.headers.token : false;
+    handlers._tokens.verifyToken(token, phone, (tokenIsValid) => {
+        if (tokenIsValid) {
+            const firstName = typeof(data.payload.firstName) == 'string' && data.payload.firstName.trim().length > 0 ? data.payload.firstName : false;
+            const lastName = typeof(data.payload.lastName) == 'string' && data.payload.lastName.trim().length > 0 ? data.payload.lastName : false;
+            const password = typeof(data.payload.password) == 'string' && data.payload.password.trim().length > 0 ? data.payload.password : false;
+            if (phone && (firstName || lastName || password)) {
+                _data.read('users', phone, (err, userData) => {
+                    if (!err && userData) {
+                        userData.firstName = firstName ? firstName : userData.firstName;
+                        userData.lastName = lastName ? lastName : userData.lastName;
+                        userData.hashedPassword = password ? helpers.hash(password) : userData.hashedPassword;
+                        _data.update('users', phone, userData, (err) => {
+                            if (!err) {
+                                callback(200)
+                            } else {
+                                callback(500, {'Error': 'Could not update user.'});
+                            }
+                        });
                     } else {
-                        callback(500, {'Error': 'Could not update user.'});
+                        callback(400, {'Error': 'The user does not exist.'});
                     }
                 });
             } else {
-                callback(400, {'Error': 'The user does not exist.'});
+                callback(400, {'Error': 'Missing required field.'});
             }
-        });
-    } else {
-        callback(400, {'Error': 'Missing required field.'});
-    }
+        } else {
+            callback(403, {'Error': 'Token missing in header, or token is invalid.'});
+        }
+    });
 }
 
 handlers._users.delete = (data, callback) => {
@@ -114,23 +127,30 @@ handlers._users.delete = (data, callback) => {
     // TODO: users can only delete their own user
     // Validate phone
     const phone = typeof(data.queryStringObject.phone) == 'string' && data.queryStringObject.phone.trim().length == 10 ? data.queryStringObject.phone : false;
-    if (phone) {
-        _data.read('users', phone, (err, userData) => {
-            if (!err && userData) {
-                _data.delete('users', phone, (err) => {
-                    if (!err) {
-                        callback(200);
+    const token = tyepoe(data.headers.token) == 'string' ? data.headers.token : false;
+    handlers._tokens.verifyToken(token, phone, (tokenIsValid) => {
+        if (tokenIsValid) {
+            if (phone) {
+                _data.read('users', phone, (err, userData) => {
+                    if (!err && userData) {
+                        _data.delete('users', phone, (err) => {
+                            if (!err) {
+                                callback(200);
+                            } else {
+                                callback(500, {'Error': 'Could not delete user.'});
+                            }
+                        });
                     } else {
-                        callback(500, {'Error': 'Could not delete user.'});
+                        callback(400, {'Error': 'Could not delete user.'});
                     }
                 });
             } else {
-                callback(400, {'Error': 'Could not delete user.'});
+                callback(400, {'Error': 'Missing required field.'});
             }
-        });
-    } else {
-        callback(400, {'Error': 'Missing required field.'});
-    }
+        } else {
+            callback(403, {'Error': 'Token missing in header, or token is invalid.'});
+        }
+    });
 }
 
 handlers.tokens = (data, callback) => {
@@ -205,7 +225,7 @@ handlers._tokens.put = (data, callback) => {
         _data.read('tokens', id, (err, tokenData) => {
             if (tokenData.expires > Date.now()) {
                 tokenData.expires = Date.now() + 1000 * 60 * 60;
-                _data.update('token', id, tokenData, (err) => {
+                _data.update('tokens', id, tokenData, (err) => {
                     if (!err) {
                         callback(200);
                     } else {
@@ -222,7 +242,41 @@ handlers._tokens.put = (data, callback) => {
 };
 
 handlers._tokens.delete = (data, callback) => {
-    
+    // required: id
+    // TODO users can only delete their own token
+    const id = typeof(data.queryStringObject.id) == 'string' && data.queryStringObject.id.trim().length == 20 ? data.queryStringObject.id : false;
+    if (id) {
+        _data.read('tokens', id, (err, tokenData) => {
+            if (!err && tokenData) {
+                _data.delete('tokens', id, (err) => {
+                    if (!err) {
+                        callback(200);
+                    } else {
+                        callback(500, {'Error': 'Could not delete token.'});
+                    }
+                });
+            } else {
+                callback(400, {'Error': 'Could not delete token.'});
+            }
+        });
+    } else {
+        callback(400, {'Error': 'Missing required field.'});
+    }
+};
+
+handlers._tokens.verifyToken = (id, phone, callback) => {
+    // look up token
+    _data.read('tokens', id, (err, tokenData) => {
+        if (!err && tokenData) {
+            if (tokenData.phone == phone && tokenData.expires > Date.now()) {
+                callback(true);
+            } else {
+                callback(false);
+            }
+        } else {
+            callback(false);
+        }
+    });
 };
 
 handlers.notfound = (data, callback) => {
