@@ -1,0 +1,118 @@
+{
+	"info": {
+		"_postman_id": "40f5765e-f427-4e66-9bc4-436945f9c3ba",
+		"name": "node masterclass",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. create user",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"firstName\": \"alice\",\n    \"lastName\": \"user\",\n    \"phone\": \"0000000001\",\n    \"password\": \"password\",\n    \"tosAgreement\": true\n}"
+				},
+				"url": {
+					"raw": "localhost:3000/users",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. generate a new token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"id": "d2c8e32e-9fe2-4a6f-9d71-927efcafb54a",
+						"exec": [
+							"var token = pm.response.json().id;",
+							"pm.environment.set(\"nodemasterclass_token\", token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"phone\": \"0000000001\",\n    \"password\": \"password\"\n\t\n}"
+				},
+				"url": {
+					"raw": "localhost:3000/tokens",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"tokens"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. create site check",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "{{nodemasterclass_token}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"protocol\":\"http\",\n\t\"url\":\"http://www.example.com\",\n\t\"method\": \"get\",\n\t\"successCodes\": [\"200\"],\n\t\"timeoutSeconds\": 5\n}"
+				},
+				"url": {
+					"raw": "localhost:3000/checks",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"checks"
+					]
+				},
+				"description": "protocol: 'http' or 'https'\nmethod: 'post', 'get', 'put', 'delete'"
+			},
+			"response": []
+		}
+	]
+}

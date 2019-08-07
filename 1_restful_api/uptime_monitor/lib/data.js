@@ -22,7 +22,7 @@ lib.create = (dir, file, data, callback) => {
                 if (!err) {
                     fs.close(fileDescriptor, (err) => {
                         if (!err) {
-                            callback(false);                                
+                            callback(false);
                         } else {
                             callback('Error closing file.');
                         }
